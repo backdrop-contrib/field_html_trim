@@ -42,7 +42,7 @@ function field_html_trim_field_formatter_settings_form_alter(&$settings_form, $c
       '#type' => 'checkbox',
       '#default_value' => $settings['enable_html_trim'],
       '#attached' => array(
-        'js' => array(drupal_get_path('module', 'field_html_trim') . '/field_html_trim.js')
+        'js' => array(drupal_get_path('module', 'field_html_trim') . '/field_html_trim.js'),
       ),
       '#attributes' => array(
         'class' => array('html-trim-checkbox'),
@@ -141,11 +141,11 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
 /**
  * Returns trimmed HTML without counting HTML tags.
  *
- * @param $safe_value
+ * @param string $safe_value
  *   The field's safe value to trim.
- * @param $trim_length
+ * @param int $trim_length
  *   The length in characters to trim the value.
- * @param $ellipsis
+ * @param string $ellipsis
  *   The ellipsis to append after trimmed value.
  */
 function _field_html_trim_get_trimmed_html($safe_value, $trim_length, $ellipsis) {

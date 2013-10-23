@@ -18,7 +18,7 @@ Drupal.behaviors.fieldHtmlTrim = {
     else {
       $htmlTrim.hide();
     }
-    
+
     // Toggle display of the html trim settings.
     $htmlTrimCheckbox.change(function() {
       if ($(this).is(':checked')) {
@@ -28,7 +28,7 @@ Drupal.behaviors.fieldHtmlTrim = {
         $htmlTrim.hide();
       }
     });
-  
+
   }
 }
 
