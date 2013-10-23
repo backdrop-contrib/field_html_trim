@@ -36,4 +36,3 @@ Navigate to administer >> build >> modules. Enable Field HTML trim.
 
 Current maintainer:
 * Alex Verbruggen (alexverb) - https://drupal.org/user/1129948
-
