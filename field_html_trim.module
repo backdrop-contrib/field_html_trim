@@ -104,7 +104,8 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
       $element = &$output[$field_name];
       $instance = field_info_instance($element['#entity_type'], $field_name, $element['#bundle']);
       $display = isset($instance['display'][$context['view_mode']]) ? $instance['display'][$context['view_mode']] : $instance['display']['default'];
-      $settings = $display['settings'];
+      // If there are display settings for view fields use those instead.
+      $settings = isset($context['display']['settings']) ? $context['display']['settings'] : $display['settings'];
 
       // Normalize the settings.
       $settings['enable_html_trim'] = isset($settings['enable_html_trim']) ? $settings['enable_html_trim'] : FALSE;
@@ -164,7 +165,8 @@ function _field_html_trim_get_trimmed_html($safe_value, $trim_length, $ellipsis)
     $words = str_word_count($short_text, 1);
     // Build regular expression pattern.
     $pattern = implode("(.*?)", $words);
-    $pattern = '/(.*?)' . $pattern . '/';
+    // Allow for newlines in the pattern.
+    $pattern = '/(.*?)' . $pattern . '/s';
     // Find the word pattern in our HTML.
     if (preg_match($pattern, $safe_value, $result)) {
       // Close any unclosed HTML tags and append ellipsis.
