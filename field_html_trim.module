@@ -105,7 +105,7 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
       $instance = field_info_instance($element['#entity_type'], $field_name, $element['#bundle']);
       $display = isset($instance['display'][$context['view_mode']]) ? $instance['display'][$context['view_mode']] : $instance['display']['default'];
       // If there are display settings for view fields use those instead.
-      $settings = is_array($context['display']['settings']) ? $context['display']['settings'] : $display['settings'];
+      $settings = (is_array($context['display']) && is_array($context['display']['settings'])) ? $context['display']['settings'] : $display['settings'];
 
       // Normalize the settings.
       $settings['enable_html_trim'] = isset($settings['enable_html_trim']) ? $settings['enable_html_trim'] : FALSE;
