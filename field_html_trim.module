@@ -121,7 +121,8 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
         case 'text_trimmed':
           foreach ($element['#items'] as $delta => $item) {
             if (!empty($settings['html_trim']['exclude_html_from_trim_count'])) {
-              $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($item['safe_value'], $settings['trim_length'], $settings['html_trim']['ellipsis']);
+              $value = isset($item['safe_value']) ? $item['safe_value'] : $item['value'];
+              $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($value, $settings['trim_length'], $settings['html_trim']['ellipsis']);
             }
           }
           break;
@@ -130,7 +131,8 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
           foreach ($element['#items'] as $delta => $item) {
             // Only perform the actual trimming when no summary is used.
             if (!empty($settings['html_trim']['exclude_html_from_trim_count']) && empty($item['summary'])) {
-              $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($item['safe_value'], $settings['trim_length'], $settings['html_trim']['ellipsis']);
+              $value = isset($item['safe_value']) ? $item['safe_value'] : $item['value'];
+              $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($value, $settings['trim_length'], $settings['html_trim']['ellipsis']);
             }
           }
           break;
