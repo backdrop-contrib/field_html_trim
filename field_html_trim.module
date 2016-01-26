@@ -61,9 +61,17 @@ function field_html_trim_field_formatter_settings_form_alter(&$settings_form, $c
       '#type' => 'checkbox',
       '#default_value' => $settings['html_trim']['exclude_html_from_trim_count'],
     );
+    // Cut off at level (character or word)
+    $settings_form['html_trim']['exact'] = array(
+      '#title' => t('Exact cut-off'),
+      '#description' => t('If checked string will be cut at character level, otherwise at word level.'),
+      '#type' => 'checkbox',
+      '#default_value' => $settings['html_trim']['exact'],
+    );
     // Ellipsis textfield. By default '...'.
     $settings_form['html_trim']['ellipsis'] = array(
       '#title' => t('Ellipsis to indicate text cut-off'),
+      '#description' => t('Ellipsis character length will be included in trim length.'),
       '#type' => 'textfield',
       '#default_value' => $settings['html_trim']['ellipsis'],
       '#size' => 4,
@@ -82,12 +90,14 @@ function field_html_trim_field_formatter_settings_summary_alter(&$summary, $cont
   $settings['enable_html_trim'] = isset($settings['enable_html_trim']) ? $settings['enable_html_trim'] : FALSE;
   $settings['html_trim']['exclude_html_from_trim_count'] = isset($settings['html_trim']['exclude_html_from_trim_count']) ? $settings['html_trim']['exclude_html_from_trim_count'] : TRUE;
   $settings['html_trim']['ellipsis'] = isset($settings['html_trim']['ellipsis']) ? $settings['html_trim']['ellipsis'] : '...';
+  $settings['html_trim']['exact'] = isset($settings['html_trim']['exact']) ? $settings['html_trim']['exact'] : TRUE;
 
   if (in_array($display['type'], array('text_trimmed', 'text_summary_or_trimmed'))) {
     if ($settings['enable_html_trim']) {
       if ($settings['html_trim']['exclude_html_from_trim_count']) {
         $summary .= '<br />' . t('HTML tags exluded from trim count');
       }
+      $summary .= $settings['html_trim']['exact'] ? '<br />' . t('Cuts of at character level') : '<br />' . t('Cuts of at word level');
       if (!empty($settings['html_trim']['ellipsis'])) {
         $summary .= '<br />' . t('Append ellipsis: @ellipsis', array('@ellipsis' => $settings['html_trim']['ellipsis']));
       }
@@ -121,8 +131,8 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
         case 'text_trimmed':
           foreach ($element['#items'] as $delta => $item) {
             if (!empty($settings['html_trim']['exclude_html_from_trim_count'])) {
-              $safe_value = isset($item['safe_value']) ? $item['safe_value'] : $item['value'];
-              $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($safe_value, $item['value'], $settings['trim_length'], $settings['html_trim']['ellipsis']);
+              $safe_value = _text_sanitize($instance, $element['#language'], $item, 'value');
+              $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($safe_value, $settings['trim_length'], $settings['html_trim']['ellipsis'], $settings['html_trim']['exact']);
             }
           }
           break;
@@ -131,8 +141,8 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
           foreach ($element['#items'] as $delta => $item) {
             // Only perform the actual trimming when no summary is used.
             if (!empty($settings['html_trim']['exclude_html_from_trim_count']) && empty($item['summary'])) {
-              $safe_value = isset($item['safe_value']) ? $item['safe_value'] : $item['value'];
-              $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($safe_value, $item['value'], $settings['trim_length'], $settings['html_trim']['ellipsis']);
+              $safe_value = _text_sanitize($instance, $element['#language'], $item, 'value');
+              $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($safe_value, $settings['trim_length'], $settings['html_trim']['ellipsis'], $settings['html_trim']['exact']);
             }
           }
           break;
@@ -151,38 +161,147 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
  * @param string $ellipsis
  *   The ellipsis to append after trimmed value.
  */
-function _field_html_trim_get_trimmed_html($safe_value, $value, $trim_length, $ellipsis) {
+function _field_html_trim_get_trimmed_html($safe_value, $trim_length, $ellipsis, $exact) {
 
   // Variable for breakpoint checking.
-  $breakpoint = strpos($value, '<!--break-->');
+  $breakpoint = strpos($safe_value, '<!--break-->');
 
-  // If a breakpoint is defined cut off the unwanted piece in advance.
+  // If a breakpoint is defined...
   if ($breakpoint !== FALSE) {
-    $value = strstr($value, '<!--break-->', TRUE);
+    // Cut off the unwanted piece.
+    $safe_value = strstr($safe_value, '<!--break-->', TRUE);
+    // Put ellipsis inside of ending html tags.
+    $safe_value = preg_replace('#^(.*)(\s?)(</[^>]+>)$#Us', '$1' . $ellipsis . '$3', $safe_value);
+    // Return corrected output.
+    return _filter_htmlcorrector($safe_value);
   }
 
-  // Get text without any formatting.
-  $text = strip_tags(str_replace('<', ' <', $value));
-  $text = preg_replace('/\n|\r|\t/m', ' ', $text);
-  $text = str_replace('&nbsp;', ' ', $text);
-  $text = str_replace("\xc2\xa0", ' ', $text);
-  $text = trim(preg_replace('/\s\s+/', ' ', $text));
-
-  if (strlen($text) > $trim_length && $breakpoint === FALSE) {
-    // Shorten the text.
-    $text = truncate_utf8($text, $trim_length, 1);
-  }
-  // Break text up in words.
-  $words = str_word_count($text, 1);
-  // Build regular expression pattern.
-  $pattern = implode("(.*?)", $words);
-  // Allow for newlines in the pattern.
-  $pattern = '/(.*?)' . $pattern . '/s';
-  // Find the word pattern in our HTML.
-  if (preg_match($pattern, $safe_value, $result)) {
-    // Close any unclosed HTML tags and append ellipsis.
-    $safe_value = _filter_htmlcorrector($result[0] . $ellipsis);
-  }
+  $safe_value = field_html_trim_truncate($safe_value, $trim_length, array('ellipsis' => $ellipsis, 'exact' => $exact));
 
   return $safe_value;
+}
+
+/**
+ * Truncates text.
+ *
+ * Cuts a string to the length of $length and replaces the last characters
+ * with the ellipsis if the text is longer than length.
+ *
+ * ### Options:
+ *
+ * - `ellipsis` Will be used as ending and appended to the trimmed string
+ * - `exact` If FALSE, $text will not be cut mid-word
+ * - `html` If TRUE, HTML tags would be handled correctly
+ *
+ * @param string $text String to truncate.
+ * @param int $length Length of returned string, including ellipsis.
+ * @param array $options An array of HTML attributes and options.
+ * @return string Trimmed string.
+ * @link http://book.cakephp.org/3.0/en/core-libraries/string.html#truncating-text
+ */
+function field_html_trim_truncate($text, $length = 100, array $options = []) {
+  $default = [
+      'ellipsis' => '...', 'exact' => TRUE, 'html' => TRUE
+  ];
+  if (!empty($options['html']) && drupal_strtolower(mb_internal_encoding()) === 'utf-8') {
+      $default['ellipsis'] = "\xe2\x80\xa6";
+  }
+  $options += $default;
+  extract($options);
+  $text = trim(preg_replace('/\s\s+/', ' ', $text));
+  if ($html) {
+    if (drupal_strlen(preg_replace('/<.*?>/', '', $text)) <= $length) {
+        return $text;
+    }
+    $totalLength = drupal_strlen(strip_tags($ellipsis));
+    $openTags = [];
+    $truncate = '';
+    preg_match_all('/(<\/?([\w+]+)[^>]*>)?([^<>]*)/', $text, $tags, PREG_SET_ORDER);
+    foreach ($tags as $tag) {
+      if (!preg_match('/img|br|input|hr|area|base|basefont|col|frame|isindex|link|meta|param/s', $tag[2])) {
+        if (preg_match('/<[\w]+[^>]*>/s', $tag[0])) {
+          array_unshift($openTags, $tag[2]);
+        }
+        elseif (preg_match('/<\/([\w]+)[^>]*>/s', $tag[0], $closeTag)) {
+          $pos = array_search($closeTag[1], $openTags);
+          if ($pos !== FALSE) {
+            array_splice($openTags, $pos, 1);
+          }
+        }
+      }
+      $truncate .= $tag[1];
+      $contentLength = drupal_strlen(preg_replace('/&[0-9a-z]{2,8};|&#[0-9]{1,7};|&#x[0-9a-f]{1,6};/i', ' ', $tag[3]));
+      if ($contentLength + $totalLength > $length) {
+        $left = $length - $totalLength;
+        $entitiesLength = 0;
+        if (preg_match_all('/&[0-9a-z]{2,8};|&#[0-9]{1,7};|&#x[0-9a-f]{1,6};/i', $tag[3], $entities, PREG_OFFSET_CAPTURE)) {
+          foreach ($entities[0] as $entity) {
+            if ($entity[1] + 1 - $entitiesLength <= $left) {
+              $left--;
+              $entitiesLength += drupal_strlen($entity[0]);
+            }
+            else {
+              break;
+            }
+          }
+        }
+        $truncate .= drupal_substr($tag[3], 0, $left + $entitiesLength);
+        break;
+      }
+      else {
+        $truncate .= $tag[3];
+        $totalLength += $contentLength;
+      }
+      if ($totalLength >= $length) {
+        break;
+      }
+    }
+  }
+  else {
+    if (drupal_strlen($text) <= $length) {
+      return $text;
+    }
+    $truncate = drupal_substr($text, 0, $length - drupal_strlen($ellipsis));
+  }
+  if (!$exact) {
+    $spacepos = mb_strrpos($truncate, ' ');
+    if ($html) {
+      $truncateCheck = drupal_substr($truncate, 0, $spacepos);
+      $lastOpenTag = mb_strrpos($truncateCheck, '<');
+      $lastCloseTag = mb_strrpos($truncateCheck, '>');
+      if ($lastOpenTag > $lastCloseTag) {
+        preg_match_all('/<[\w]+[^>]*>/s', $truncate, $lastTagMatches);
+        $lastTag = array_pop($lastTagMatches[0]);
+        $spacepos = mb_strrpos($truncate, $lastTag) + drupal_strlen($lastTag);
+      }
+      $bits = drupal_substr($truncate, $spacepos);
+      preg_match_all('/<\/([a-z]+)>/', $bits, $droppedTags, PREG_SET_ORDER);
+      if (!empty($droppedTags)) {
+        if (!empty($openTags)) {
+          foreach ($droppedTags as $closingTag) {
+            if (!in_array($closingTag[1], $openTags)) {
+              array_unshift($openTags, $closingTag[1]);
+            }
+          }
+        }
+        else {
+          foreach ($droppedTags as $closingTag) {
+            $openTags[] = $closingTag[1];
+          }
+        }
+      }
+    }
+    $truncate = drupal_substr($truncate, 0, $spacepos);
+    // If truncate still empty, then we don't need to count ellipsis in the cut.
+    if (drupal_strlen($truncate) === 0) {
+        $truncate = drupal_substr($text, 0, $length);
+    }
+  }
+  $truncate .= $ellipsis;
+  if ($html) {
+    foreach ($openTags as $tag) {
+      $truncate .= '</' . $tag . '>';
+    }
+  }
+  return $truncate;
 }
