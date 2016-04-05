@@ -199,10 +199,10 @@ function _field_html_trim_get_trimmed_html($safe_value, $trim_length, $ellipsis,
  * @return string Trimmed string.
  * @link http://book.cakephp.org/3.0/en/core-libraries/string.html#truncating-text
  */
-function field_html_trim_truncate($text, $length = 100, array $options = []) {
-  $default = [
+function field_html_trim_truncate($text, $length = 100, array $options = array()) {
+  $default = array(
       'ellipsis' => '...', 'exact' => TRUE, 'html' => TRUE
-  ];
+  );
   if (!empty($options['html']) && drupal_strtolower(mb_internal_encoding()) === 'utf-8') {
       $default['ellipsis'] = "\xe2\x80\xa6";
   }
@@ -214,7 +214,7 @@ function field_html_trim_truncate($text, $length = 100, array $options = []) {
         return $text;
     }
     $totalLength = drupal_strlen(strip_tags($ellipsis));
-    $openTags = [];
+    $openTags = array();
     $truncate = '';
     preg_match_all('/(<\/?([\w+]+)[^>]*>)?([^<>]*)/', $text, $tags, PREG_SET_ORDER);
     foreach ($tags as $tag) {
