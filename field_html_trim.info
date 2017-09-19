@@ -1,5 +1,7 @@
-name = "Field HTML trim"
-description = "Extends the settings for trimmed text fields, that allows us to trim without counting HTML tags."
-core = 7.x
+name = Field HTML Trim
+description = Trims HTML-enabled text to a set length without counting HTML tags.
+backdrop = 1.x
+type = module
 package = Fields
 dependencies[] = field_formatter_settings
+
