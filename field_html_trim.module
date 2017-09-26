@@ -97,7 +97,8 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
     if (in_array($output[$field_name]['#formatter'], $supported)) {
       $element = &$output[$field_name];
       $instance = field_info_instance($element['#entity_type'], $field_name, $element['#bundle']);
-      $settings = field_formatter_settings_get_instance_display_settings($element['#entity_type'], $field_name, $element['#bundle'], $element['#view_mode']);
+      $display = isset($instance['display'][$context['view_mode']]) ? $instance['display'][$context['view_mode']] : $instance['display']['default'];
+      $settings = (is_array($context['display']) && is_array($context['display']['settings'])) ? $context['display']['settings'] : $display['settings'];
 
       // Only proceed if HTML Trim is enabled.
       if (!$settings['enable_html_trim']) {
