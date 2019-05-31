@@ -3,5 +3,4 @@ description = Trims HTML-enabled text to a set length without counting HTML tags
 backdrop = 1.x
 type = module
 package = Fields
-dependencies[] = field_formatter_settings
 

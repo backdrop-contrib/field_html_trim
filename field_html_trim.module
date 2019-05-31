@@ -13,6 +13,7 @@ function field_html_trim_field_formatter_info_alter(&$info) {
   foreach ($supported as $type) {
     $info[$type]['settings']['enable_html_trim'] = FALSE;
     $info[$type]['settings']['html_trim']['exclude_html_from_trim_count'] = TRUE;
+    $info[$type]['settings']['html_trim']['exact'] = FALSE;
     $info[$type]['settings']['html_trim']['ellipsis'] = '...';
   }
 }
@@ -35,7 +36,7 @@ function field_html_trim_field_formatter_settings_form_alter(&$settings_form, $c
       '#type' => 'container',
       '#states' => array(
         'visible' => array(
-          ':input[name$="enable_html_trim]"]' => array('checked' => TRUE),
+          ':input[name$="[enable_html_trim]"]' => array('checked' => TRUE),
         ),
       ),
     );
@@ -106,12 +107,14 @@ function field_html_trim_field_attach_view_alter(&$output, $context) {
       }
 
       foreach ($element['#items'] as $delta => $item) {
-        // Only perform the actual trimming when no summary is used.
-        if (!isset($item['summary']) || empty($item['summary'])) {
-          if ($settings['html_trim']['exclude_html_from_trim_count']) {
-            $safe_value = _text_sanitize($instance, $element['#language'], $item, 'value');
-            $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($safe_value, $settings['trim_length'], $settings['html_trim']['ellipsis'], $settings['html_trim']['exact']);
-          }
+        // Don't trim when there's a summary.
+        if ((strpos($display['type'], 'summary') !== FALSE) && (isset($item['summary']) || !empty($item['summary']))) {
+          continue;
+        }
+
+        if ($settings['html_trim']['exclude_html_from_trim_count']) {
+          $safe_value = _text_sanitize($instance, $element['#language'], $item, 'value');
+          $element[$delta]['#markup'] = _field_html_trim_get_trimmed_html($safe_value, $settings['trim_length'], $settings['html_trim']['ellipsis'], $settings['html_trim']['exact']);
         }
       }
     }
