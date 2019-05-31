@@ -1,13 +1,10 @@
 Field HTML Trim
 ===============
 
-Field HTML Trim adds settings to text field formatters (via the
-[Field Formatter Settings](https://backdropcms.org/project/field_formatter_settings)
-module) to allow trimming an HTML-enabled text field without counting HTML tags.
-
-This means that you can make sure your trimmed text is always the correct
-length, even when there's an image or other HTML content at the beginning of the
-text.
+Field HTML Trim allows trimming an HTML-enabled text field without counting HTML
+tags towards the character limit. This means that your trimmed text will be much
+closer to the correct length, even when there's an image or other HTML content
+at the beginning of the text.
 
 Installation
 ------------
