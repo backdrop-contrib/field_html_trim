@@ -24,7 +24,7 @@ https://github.com/backdrop-contrib/field_html_trim/issues.
 Current Maintainers
 -------------------
 
-- Peter Anderson (https://github.com/BWPanda).
+- Seeking maintainer(s)
 
 Credits
 -------
